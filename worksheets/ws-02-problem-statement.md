@@ -64,36 +64,52 @@ Masalah riset yang layak harus memenuhi 5 kriteria:
 ## Template A.2 — Problem Statement Builder
 
 ```
-PROBLEM STATEMENT BUILDER
-
 Domain & Konteks
-  Domain   : ____________________
-  Konteks  : ____________________
+  Domain   : Keamanan Aplikasi Web / Kriptografi Terapan
+  Konteks  : Enkripsi data di sisi klien (Client-Side Encryption) pada aplikasi web 
+             yang menangani data medis atau finansial sensitif.
 
 System Context
-  Input       : ____________________
-  Process     : ____________________
-  Output      : ____________________
-  Outcome     : ____________________
-  Constraints : ____________________
-  Stakeholders: ____________________
+  Input       : Data sensitif mentah (plaintext), kunci enkripsi (cryptographic key), 
+                dan pustaka/modul kriptografi.
+  Process     : Proses komputasi matematis untuk mengubah plaintext menjadi ciphertext 
+                di dalam runtime browser sebelum data dikirim melalui jaringan.
+  Output      : Payload data terenkripsi aman (ciphertext).
+  Outcome     : Kerahasiaan data terjaga sejak dari perangkat pengguna (End-to-End Privacy), 
+                meminimalkan risiko kebocoran data akibat serangan Man-in-the-Middle (MitM).
+  Constraints : Keterbatasan daya komputasi CPU pada gawai mobile low-end, batasan memori 
+                sandbox browser, dan lingkungan JavaScript yang bersifat single-threaded.
+  Stakeholders: Pengembang web (Web Developer), Tim Keamanan Siber, dan Pengguna Aplikasi.
 
 Fenomena → Problem
-  Fenomena yang diamati             : ____________________
-  Gejala (symptom) yang terukur     : ____________________
-  Masalah yang didiagnosis          : ____________________
-  Masalah riset (researchable)      : ____________________
-  Variabel yang terukur             : ____________________
+  Fenomena yang diamati             : Aplikasi web mengalami perlambatan performa atau 
+                                      membeku (freeze) sesaat ketika memproses enkripsi data.
+  Gejala (symptom) yang terukur     : Latensi pemrosesan enkripsi mencapai >2.500 ms untuk 
+                                      file/payload berukuran >2 MB pada perangkat mobile.
+  Masalah yang didiagnosis          : Operasi matematika intensif algoritma kriptografi 
+                                      menghabiskan resource Main UI Thread pada JavaScript.
+  Masalah riset (researchable)      : Bagaimana meminimalkan overhead latensi enkripsi data 
+                                      client-side melalui arsitektur komputasi paralel atau 
+                                      eksekusi berbasis low-level binary di browser?
+  Variabel yang terukur             : Waktu eksekusi enkripsi (ms), konsumsi kapasitas CPU (%), 
+                                      dan frame rate UI (FPS) selama proses enkripsi.
 
 Problem Quality Check
-  [ ] Clarity — Apakah satu orang membaca akan paham?
-  [ ] Measurability — Apakah ada metrik kuantitatif?
-  [ ] Relevance — Apakah penting untuk domain?
-  [ ] Testability — Apakah bisa gagal?
-  [ ] Impact — Apakah ada kontribusi jika terjawab?
+  [X] Clarity — Apakah satu orang membaca akan paham?
+  [X] Measurability — Apakah ada metrik kuantitatif?
+  [X] Relevance — Apakah penting untuk domain?
+  [X] Testability — Apakah bisa gagal?
+  [X] Impact — Apakah ada kontribusi jika terjawab?
 
 Problem Statement (1 paragraf):
-  ____________________
+  Implementasi enkripsi data client-side pada aplikasi web sering kali memicu latensi 
+  komputasi yang tinggi (mencapai >2.500 ms untuk payload >2 MB) khususnya pada perangkat 
+  mobile, karena operasi kriptografi intensif berjalan di atas Main UI Thread JavaScript 
+  yang bersifat single-threaded. Akibatnya, aplikasi mengalami pembekuan antarmuka 
+  (UI freeze) dan penurunan responsivitas yang merusak user experience. Penelitian ini 
+  berfokus pada optimalisasi performa komputasi enkripsi di sisi klien dengan menguji 
+  efisiensi arsitektur paralel berbasis Web Workers dan WebAssembly untuk mereduksi latensi 
+  eksekusi tanpa menurunkan standar kekuatan algoritma enkripsi yang digunakan.
 ```
 
 ---
@@ -102,18 +118,17 @@ Problem Statement (1 paragraf):
 
 Pilih satu topik di bidang TI yang diminati. Transformasikan melalui 5 tahap Problem Formation Model.
 
-**Topik awal:** ________________________________________
+**Topik awal:** Implementasi enkripsi data pada aplikasi web
 
-| Tahap | Hasil |
-|-------|-------|
-| Reality | *Contoh: Aplikasi e-commerce sering ditinggalkan saat checkout* |
-| Observed Issue (Symptom) | *Contoh: Bounce rate checkout 68%* |
-| Diagnosed Problem (Root Cause) | |
-| Researchable Problem | |
-| Measurable Variable | |
+Tahap	Hasil
+Reality	Pengembang ingin mengamankan data formulir sensitif langsung dari browser pengguna sebelum data tersebut dikirim ke server cloud.
+Observed Issue (Symptom)	Pengguna mengeluhkan tombol "Kirim/Simpan" menjadi tidak responsif selama beberapa detik, dengan metrik freeze rata-rata 2,5 detik pada perangkat mobile.
+Diagnosed Problem (Root Cause)	Pustaka kriptografi yang digunakan ditulis dalam JavaScript murni (pure JS library) yang mengeksekusi algoritma berat (seperti AES-256-GCM) langsung di main thread browser.
+Researchable Problem	Memanfaatkan teknologi low-level binary (WebAssembly) untuk menggeser beban komputasi berat keluar dari eksekusi JavaScript standar di browser.
+Measurable Variable	Latensi enkripsi (milidetik), Throughput data (MB/detik), dan responsivitas antarmuka aplikasi (Frame Per Second / FPS).
 
-**Apakah terjebak solution-first thinking?** [ ] Ya / [ ] Tidak
-> Jika ya, kembali ke tahap mana? ________________________
+**Apakah terjebak solution-first thinking?** [ ] Ya / [v] Tidak
+> Jika ya, kembali ke tahap mana? Sudah fokus pada penyelesaian bottleneck performa berdasarkan akar masalah main thread block
 
 ---
 
@@ -121,16 +136,15 @@ Pilih satu topik di bidang TI yang diminati. Transformasikan melalui 5 tahap Pro
 
 Gambarkan konteks sistem dari masalah riset di Latihan 1.
 
-| Komponen | Deskripsi |
-|----------|----------|
-| Input | *Contoh: Request HTTP dari browser pengguna* |
-| Process | |
-| Output | |
-| Outcome | |
-| Constraints | |
-| Stakeholders | |
+Komponen	Deskripsi
+Input	Data isian pengguna (plaintext) dan kunci rahasia (session key) yang di-generate di browser.
+Process	Eksekusi fungsi matematika algoritma enkripsi menggunakan pustaka berbasis WebAssembly.
+Output	String terenkripsi (ciphertext) berformat Base64 atau ArrayBuffer.
+Outcome	Data terkirim ke server dengan aman tanpa bisa diintip oleh penyedia jaringan (ISP) atau penyerang lokal.
+Constraints	Keterbatasan dukungan spesifikasi WebAssembly pada browser versi lama dan keterbatasan daya baterai gawai mobile akibat komputasi intensif.
+Stakeholders	Pengguna akhir aplikasi web (pemilik data) dan Pengembang Front-End.
 
-**Komponen mana yang paling relevan dengan masalah riset?** _______________
+**Komponen mana yang paling relevan dengan masalah riset?** Process dan Constraints
 
 ---
 
@@ -138,20 +152,17 @@ Gambarkan konteks sistem dari masalah riset di Latihan 1.
 
 Evaluasi problem statement yang sudah dibuat menggunakan 5 kriteria.
 
-| Kriteria | Skor (1-5) | Justifikasi |
-|----------|-----------|-------------|
-| Clarity | *Contoh: 4 — cukup jelas tapi perlu spesifikasi dataset* | |
-| Measurability | | |
-| Relevance | | |
-| Testability | | |
-| Impact | | |
+Kriteria	Skor (1-5)	Justifikasi
+Clarity	5	Masalah sangat spesifik: latensi enkripsi web, penyebabnya (single-threaded JS), dan dampaknya (UI freeze).
+Measurability	5	Memiliki batasan angka konkret (>2.500 ms untuk file >2 MB) serta metrik pembanding (ms, FPS).
+Relevance	4	Sangat relevan di era privasi data ketat (Privacy by Design), namun terbatas pada ekosistem web modern.
+Testability	5	Dapat diuji dengan mudah melalui skenario eksperimen lab: jika WebAssembly tidak memangkas waktu eksekusi, hipotesis dinyatakan gagal.
+Impact	4	Memberikan solusi nyata bagi arsitektur aplikasi web berkinerja tinggi yang aman tanpa mengorbankan kenyamanan pengguna.
 
-**Skor total:** _____ / 25
+**Skor total:** 23/25
 
 **Problem statement versi final (1 paragraf):**
-> ___________________________________________________
-> ___________________________________________________
-
+Implementasi enkripsi data client-side berbasis JavaScript murni pada aplikasi web sering kali memicu latensi tinggi (mencapai >2.500 ms untuk payload berukuran >2 MB) yang memblokir Main UI Thread browser. Hambatan ini mengakibatkan penurunan responsivitas halaman web secara drastis saat memproses data sensitif pengguna pada gawai mobile menengah ke bawah. Penelitian ini ditujukan untuk mengatasi masalah latensi tersebut dengan merancang dan menguji modul enkripsi berbasis WebAssembly guna memindahkan komputasi berat kriptografi ke tingkat low-level binary execution, sehingga diharapkan mampu mereduksi overhead latensi tanpa mengurangi integritas keamanan data.
 ---
 
 ## Refleksi
@@ -159,5 +170,8 @@ Evaluasi problem statement yang sudah dibuat menggunakan 5 kriteria.
 > Bandingkan "masalah" yang biasa ditemui saat coding (bug, error) dengan masalah riset. Apa perbedaan fundamental dalam cara mendefinisikan dan mendekati keduanya?
 
 **Jawaban:**
-> ___________________________________________________
-> ___________________________________________________
+Perbedaan utamanya terletak pada sifat kepastian solusi dan cakupannya.
+
+Saat coding, masalah biasanya berupa bug atau error (seperti TypeError: crypto.encrypt is not a function). Masalah ini bersifat deterministik, lokasinya jelas pada baris kode tertentu, dan solusinya sudah pasti ada (misalnya memperbaiki sintaksis atau melengkapi pustaka yang kurang). Cara pendekatannya adalah pelacakan kesalahan (debugging) berdasarkan dokumentasi teknis yang ada.
+
+Sebaliknya, masalah riset bersifat multi-dimensi dan tidak memiliki jawaban tunggal yang instan. Masalah riset muncul dari adanya gap performa atau batasan sistem di dunia nyata (seperti "Mengapa enkripsi aman selalu membuat web lambat di HP murah?"). Pendekatannya membutuhkan dekomposisi variabel, eksperimen komparatif, dan pembuktian empiris. Solusi dari masalah riset adalah sebuah kontribusi pengetahuan baru yang menyeimbangkan berbagai kompromi teknis (trade-off), bukan sekadar membuat kode program berjalan tanpa error error di konsol browser.
