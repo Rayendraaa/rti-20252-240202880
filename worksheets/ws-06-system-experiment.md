@@ -79,26 +79,28 @@ Jika variabel tidak bisa di-map ke komponen apapun → arsitektur perlu didesain
 
 ```
 SYSTEM-EXPERIMENT MAPPING
-
-Research Question: ____________________
+Research Question: 
+Apakah arsitektur hibrida WASM-WW mampu mereduksi Total Blocking Time (TBT) hingga di bawah 50 ms dibandingkan dengan CryptoJS dan Native WebCrypto API saat melakukan enkripsi payload data JSON >2 MB di dalam lingkungan mobile browser dengan CPU throttling 4x?
 
 Variable → Component Mapping:
 | Variabel | Tipe | Komponen Sistem | Cara Manipulasi/Pengukuran |
 |----------|------|-----------------|---------------------------|
-|          | IV   |                 |                           |
-|          | DV   |                 |                           |
-|          | CV   |                 |                           |
+| Arsitektur Enkripsi | IV | Modul Kriptografi (*Crypto Engine Driver*) | Mengubah konfigurasi injeksi modul (`Config.ENGINE_TYPE`) menjadi 'WASM_WW', 'CRYPTO_JS', atau 'NATIVE_WEB_CRYPTO'. |
+| Total Blocking Time (TBT) | DV | Pengamat Performa (*Performance Observer API*) | *Built-in listener* mendengarkan tipe 'longtask' di Main Thread dan mengakumulasikan durasi tugas yang melebihi 50 ms. |
+| Execution Latency | DV | Pencatat Waktu (*High-Resolution Timer*) | Memasang penanda waktu berbasis `performance.now()` tepat sebelum dan sesudah fungsi enkripsi dieksekusi. |
+| Ukuran Payload Data | CV | Generator Data Uji (*Data Mock Provider*) | Menyuntikkan file JSON tiruan dengan opsi ukuran statis yang diatur secara presisi pada 500 KB, 2 MB, dan 10 MB. |
+| Tingkat Throttling CPU | CV | Profiler Perangkat (*Browser DevTools Throttling*) | Mengontrol emulasi performa perangkat melalui protokol otomatisasi Puppeteer (`Emulation.setCPUThrottlingRate`). |
 
 4 Prinsip Desain:
-  [ ] Traceability — Setiap komponen bisa ditelusuri ke variabel
-  [ ] Variable Isolation — IV bisa diubah tanpa mengubah CV
-  [ ] Measurement Integration — Pengukuran DV built-in
-  [ ] Reproducibility — Setup bisa direkonstruksi
+  [X] Traceability — Setiap komponen bisa ditelusuri ke variabel
+  [X] Variable Isolation — IV bisa diubah tanpa mengubah CV
+  [X] Measurement Integration — Pengukuran DV built-in
+  [X] Reproducibility — Setup bisa direkonstruksi
 
 Experimental Setup:
-  Input data     : ____________________
-  Parameter      : ____________________
-  Output format  : ____________________
+  Input data     : File data terstruktur JSON (Simulasi Rekam Medis Elektronik) bervariasi ukuran.
+  Parameter      : Iterasi = 30x per skenario, Algoritma Utama = AES-256-GCM, Mode Browser = Headless Chrome.
+  Output format  : File CSV berisi matriks: [Skenario_ID, IV_Type, Payload_Size, CPU_Throttle, Latency_ms, TBT_ms].
 ```
 
 ---
@@ -107,33 +109,26 @@ Experimental Setup:
 
 Gunakan RQ dan variabel dari WS-05. Petakan ke komponen sistem.
 
-**RQ:** __________________________________________________
+**RQ:** Apakah arsitektur hibrida WASM-WW mampu mereduksi Total Blocking Time (TBT) hingga di bawah 50 ms dibandingkan dengan CryptoJS dan Native WebCrypto API saat melakukan enkripsi payload data JSON >2 MB di dalam lingkungan mobile browser dengan CPU throttling 4x?
 
-| Variabel | Tipe | Komponen Sistem | Cara Manipulasi / Pengukuran |
-|----------|------|-----------------|---------------------------|
-| *Contoh: Jenis model* | *IV* | *Modul classifier (swap RF ↔ CNN)* | *Ganti config `model_type`* |
-| | DV | | |
-| | CV | | |
+VariabelTipeKomponen SistemCara Manipulasi / PengukuranArsitektur EnkripsiIVCrypto Factory Wrapper (Modul Penukar Mesin Enkripsi)Mengganti dependency injection pustaka enkripsi lewat parameter inisialisasi aplikasi tanpa mengubah logika UI.Total Blocking TimeDVMain-Thread Long Task TrackerMenggunakan web API bawaan browser untuk memantau pemblokiran UI thread selama fungsi kriptografi berjalan.Execution LatencyDVCore Crypto TimerMengukur waktu Delta ($\Delta t$) pemrosesan internal pada modul yang aktif.Ukuran PayloadCVMemory Data BufferMemuat string JSON ke memori virtual browser dengan kapasitas beban yang dikunci secara statis.CPU ThrottlingCVChromium Headless ControllerMemanipulasi rate throttling (4x/6x) lewat script execution bridge dari luar sistem sandbox browser.
 
-**Apakah semua variabel bisa di-map?** [ ] Ya / [ ] Tidak
+**Apakah semua variabel bisa di-map?** [v] Ya / [ ] Tidak
 > Jika tidak, komponen apa yang perlu ditambahkan? _________
 
 ---
 
 ## Latihan 2 — 4 Prinsip Desain
 
-Evaluasi desain sistem terhadap 4 prinsip.
+Evaluasi desain arsitektur sistem pengujian enkripsi web terhadap 4 prinsip dasar riset:PrinsipStatusBukti / Penjelasan
+Traceability✅Setiap komponen arsitektur mewakili variabel secara jernih. Crypto Factory Wrapper merepresentasikan IV, sementara Tracker dan Timer merepresentasikan DV.
+Modularity✅Kode enkripsi dipisahkan secara ketat dari kode antarmuka. Komponen Web Worker dibuat dalam berkas terpisah (worker.js) sehingga mudah dilepas atau dipasang.
+Controllability✅Peneliti memegang kendali penuh. Ukuran payload dan tingkat pelambatan CPU diatur secara programatik lewat skrip automasi luar, bebas dari intervensi manual.
+Measurability✅Pengukuran bersifat built-in dan non-intrusif menggunakan API standar resmi browser (PerformanceObserver), sehingga meminimalkan efek observer's paradox (alat ukur memperlambat sistem).
 
-| Prinsip | Status | Bukti / Penjelasan |
-|---------|--------|-------------------|
-| Traceability | *Contoh: ✅ — setiap modul punya label variabel* | |
-| Modularity | | |
-| Controllability | | |
-| Measurability | | |
-
-**Prinsip mana yang paling sulit dipenuhi?** _______________
+**Prinsip mana yang paling sulit dipenuhi?** Controllability (Isolasi Variabel terhadap Browser Noise)
 **Strategi untuk mengatasinya:**
-> ___________________________________________________
+> Mesin browser memiliki subsistem otomatis yang tidak bisa dikontrol sepenuhnya oleh peneliti, seperti Garbage Collection (GC) memori dan optimasi optimistik Just-In-Time (JIT) kompiler. Untuk mengatasinya, strategi mitigasi yang dilakukan adalah mengeksekusi warm-up run (pemotongan iterasi pertama) agar JIT selesai bekerja, melakukan force garbage collection di sela-sela perpindahan skenario, serta meningkatkan jumlah pengujian hingga 30 kali iterasi lalu mengambil nilai median untuk mengeliminasi pencilan data akibat noise sistem.
 
 ---
 
@@ -144,16 +139,15 @@ Jika sistem memiliki 3 komponen utama, rencanakan ablation study.
 > **Panduan jumlah kondisi:** Untuk 3 komponen (A, B, C), kondisi minimal yang direkomendasikan:
 > Full + (-A) + (-B) + (-C) = **4 kondisi dasar**. Jika waktu memungkinkan, tambahkan kombinasi ganda: (-A,-B), (-A,-C), (-B,-C) = **7 kondisi**. Sesuaikan dengan *computational cost* dan tenggat waktu penelitian.
 
-| Kondisi | Komponen A | Komponen B | Komponen C | Hasil yang Diharapkan |
-|---------|-----------|-----------|-----------|----------------------|
-| Full | *Contoh: ✅ CNN* | *Contoh: ✅ Temporal features* | *Contoh: ✅ Z-score norm* | *Baseline penuh* |
-| – A | ❌ (ganti RF) | ✅ | ✅ | |
-| – B | ✅ | ❌ (tanpa temporal) | ✅ | |
-| – C | ✅ | ✅ | ❌ (tanpa normalisasi) | |
+Kondisi	Komponen A (WASM)	Komponen B (Web Workers)	Komponen C (Streaming)	Hasil yang Diharapkan
+Full	✅ Rust-compiled WASM      	✅ Terisolasi di Background      	✅ Data dipotong per 64 KB	Performa Optimal: TBT < 50 ms dan Latency minimum pada payload 10 MB.
+– A	❌ JavaScript murni	      ✅ Terisolasi di Background	      ✅ Data dipotong per 64 KB	Latensi komputasi membengkak karena JS murni lambat, tetapi TBT tetap aman (<50 ms) karena berada di background thread.
+– B	✅ Rust-compiled WASM	      ❌ Berjalan di Main UI Thread      	✅ Data dipotong per 64 KB	Latensi komputasi sangat cepat, namun TBT hancur (>500 ms) karena Main Thread terkunci selama proses enkripsi.
+– C	✅ Rust-compiled WASM	      ✅ Terisolasi di Background      	❌ Data dimuat utuh (Bulk memory)	TBT aman, tetapi terjadi lonjakan drastis pada penggunaan RAM b
 
-**Komponen mana yang diprediksi paling berkontribusi?** _____
+**Komponen mana yang diprediksi paling berkontribusi?** Komponen B (Web Workers)
 **Mengapa?**
-> ___________________________________________________
+> Karena esensi dari metrik Total Blocking Time (TBT) adalah mengukur durasi hambatan pada Main UI Thread. Secepat apa pun fungsi matematika enkripsi dipercepat oleh WebAssembly (Komponen A), jika komputasi tersebut tetap dieksekusi di atas Main Thread, browser akan tetap menganggapnya sebagai Long Task yang memicu UI freeze. Memindahkan beban kerja keluar dari Main Thread melalui Web Workers (Komponen B) adalah kunci utama yang secara langsung mengeliminasi nilai TBT hingga mendekati 0 ms.
 
 ---
 
@@ -162,5 +156,6 @@ Jika sistem memiliki 3 komponen utama, rencanakan ablation study.
 > Apa risiko jika sistem dibangun seperti produk (monolitik, fitur lengkap) lalu baru dilakukan eksperimen? Mengapa arsitektur modular penting untuk riset?
 
 **Jawaban:**
-> ___________________________________________________
-> ___________________________________________________
+Jika sistem dibangun seperti produk monolitik yang langsung jadi dengan segala fiturnya (misal: langsung digabung dengan sistem autentikasi, penyimpanan database local, dan animasi UI yang kompleks), peneliti akan menghadapi masalah Confounding Variables (Variabel Pengganggu). Ketika hasil eksperimen menunjukkan performa web melambat, peneliti tidak akan bisa mendiagnosis dengan pasti apakah perlambatan tersebut murni disebabkan oleh algoritma enkripsinya, akibat proses baca-tulis database, atau karena beban rendering komponen UI.
+
+    Di sinilah letak perbedaan fundamental arsitektur riset dan arsitektur produk. Arsitektur modular sangat krusial dalam penelitian karena memungkinkan kita melakukan isolasi variabel secara ketat. Kita bisa mempreteli atau menukar satu komponen spesifik (seperti dalam Ablation Study atau penggantian mesin IV) tanpa mengganggu fungsi komponen lainnya. Sifat modular ini menjamin tingkat validitas internal yang tinggi, karena kita dapat membuktikan secara empiris hubungan sebab-akibat langsung antara perubahan arsitektur dengan variasi metrik performa yang dihasilkan.
