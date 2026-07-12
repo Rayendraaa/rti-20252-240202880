@@ -1,69 +1,13 @@
 # WS-09: Implementation & Environment
 
 > **Bab 9 — Implementasi Riset & Kontrol Lingkungan**
+> **Tema Eksperimen: Implementasi End-to-End Encryption (E2EE) pada Sistem Chat/Pesan Berbasis PHP**
 
 ---
 
-## Ringkasan Materi
+## Konteks Eksperimen
 
-### Implementasi Riset ≠ Coding Biasa
-
-Tujuan implementasi riset bukan membuat software yang berfungsi, melainkan membangun **instrumen pengukuran yang konsisten**. Setiap modul harus di-mapping ke variabel (dari Bab 6), parameter harus config-driven, dan logging aktif dari hari pertama.
-
-> **Mengapa reproducibility penting?** Sains dibangun di atas prinsip verifikasi — temuan harus bisa dikonfirmasi oleh peneliti lain. _Replicability crisis_ yang terjadi di banyak paper riset ML/AI disebabkan oleh environment tidak terdokumentasi: orang lain tidak bisa reproduksi, hasil diragukan, kepercayaan terhadap temuan hilang. Prinsip: **dokumentasi environment = snapshot kredibilitas riset Anda.**
-
-### Reproducible Implementation Model
-
-```
-Design → Implementation → Environment Setup → Execution Consistency → Reproducibility → Trustworthy Result
-```
-
-Setiap transisi memiliki syarat:
-- Design → Implementation: kode sesuai mapping variabel-ke-komponen
-- Implementation → Environment: versi, dependency, seed, path, OS eksplisit
-- Environment → Consistency: seed terkunci, urutan deterministik
-- Consistency → Reproducibility: dokumentasi lengkap
-- Reproducibility → Trust: siapa pun ikuti dokumentasi → hasil sama/serupa
-
-### Repeatability vs Reproducibility
-
-| Level | Peneliti | Environment | Hasil |
-|-------|---------|-------------|-------|
-| **Repeatability** | Sama | Sama | Sama persis |
-| **Reproducibility** | Berbeda | Berbeda (ikuti docs) | Sama/serupa |
-
-Capai **repeatability** dulu, baru **reproducibility**.
-
-### Engineering vs Research Perspective
-
-| Aspek | Engineering | Research |
-|-------|-----------|---------|
-| Tujuan | Sistem berfungsi untuk user | Instrumen pengukuran konsisten |
-| Dependency | Update ke terbaru | Lock di versi spesifik |
-| Testing | Unit, integration, E2E | Repeatability test (run ulang → sama?) |
-| Dokumentasi | User guide, API docs | Environment spec, execution steps, expected output |
-| Config | Default masuk akal | Setiap parameter eksplisit & adjustable |
-
-### Jebakan Kognitif
-
-1. Menunda environment setup → bug sulit dilacak
-2. Tidak pakai version control → hasil tidak bisa direkonstruksi
-3. Menolak Docker/container → "di laptop saya bisa" saat review
-   - **Docker** = teknologi container yang "membungkus" aplikasi beserta seluruh dependency-nya dalam satu unit terisolasi. Hasilnya: kode berjalan identik di laptop, server, maupun reviewer lain. Intro singkat: `docker run -v $(pwd):/workspace environment-image python run_experiment.py`
-4. 3× hasil sama ≠ repeatable (bisa cache/state tersimpan)
-
-### Dependency Locking
-
-Mengandalkan "install library terbaru" berbahaya: versi berbeda = perilaku berbeda = hasil tidak reproducible. Praktik:
-- **Python**: buat `requirements.txt` dengan versi eksplisit: `scikit-learn==1.3.2`, lalu kunci dengan `pip freeze > requirements.txt`
-- **Conda**: gunakan `conda env export > environment.yml` untuk snapshot lengkap
-- **Node.js/R/Julia**: gunakan `package-lock.json` / `renv.lock` / `Project.toml` — semua fungsi serupa: lock versi + hash
-
-### Istilah Penting
-
-- **Environment Specification** — Deskripsi lengkap: hardware, OS, runtime, library + versi, config, seed
-- **Dependency** — Komponen eksternal yang harus di-lock versinya
-- **Config-driven** — Parameter dieksternalisasi ke file konfigurasi, bukan hardcode
+Eksperimen ini mengukur **konsistensi performa** implementasi End-to-End Encryption (E2EE) menggunakan skema hybrid **RSA (pertukaran kunci) + AES-256-CBC (enkripsi pesan)** pada aplikasi berbasis PHP. Variabel yang diukur: waktu enkripsi, waktu dekripsi, dan integritas pesan (hasil dekripsi harus identik dengan plaintext asli) pada ukuran pesan yang bervariasi.
 
 ---
 
@@ -73,114 +17,114 @@ Mengandalkan "install library terbaru" berbahaya: versi berbeda = perilaku berbe
 EXPERIMENT SETUP DOCUMENTATION
 
 Hardware:
-  CPU     : ____________________
-  RAM     : ____________________
-  GPU     : ____________________
-  Storage : ____________________
+  CPU     : (isi sesuai laptop Anda, mis. Intel Core i5 generasi 10+)
+  RAM     : (isi sesuai perangkat, mis. 8 GB)
+  GPU     : Tidak relevan (proses kriptografi berbasis CPU)
+  Storage : (isi sesuai perangkat, mis. SSD 256 GB)
 
 Software:
-  OS        : ____________________
-  Runtime   : ____________________
-  Framework : ____________________
+  OS        : Windows 10/11
+  Runtime   : PHP 8.x (bundled XAMPP)
+  Framework : CodeIgniter (dengan ekstensi openssl aktif)
 
 Dependencies:
-| Library | Version | Sumber | Hash/Checksum |
-|---------|---------|--------|---------------|
-|         |         |        |               |
-|         |         |        |               |
+| Library         | Version        | Sumber                  | Hash/Checksum        |
+|-----------------|----------------|--------------------------|-----------------------|
+| PHP OpenSSL ext | bundled PHP 8.x| XAMPP installer          | (sesuai installer XAMPP) |
+| CodeIgniter     | 3.x / 4.x      | codeigniter.com          | (sesuai rilis resmi)  |
+| Composer (opsional) | 2.x        | getcomposer.org          | (sesuai installer)    |
 
 Konfigurasi:
-  Config file     : ____________________
-  Random seed     : ____________________
-  Hyperparameters : ____________________
+  Config file     : config/encryption.php (kunci RSA, ukuran blok AES, mode CBC)
+  Random seed     : openssl_random_pseudo_bytes() untuk IV — dicatat per-run agar dapat direplikasi
+  Hyperparameters : Panjang kunci RSA = 2048 bit, algoritma AES = AES-256-CBC
 
 Reproducibility Check:
-  [ ] Dependency terdokumentasi (requirements.txt / lock file)
-  [ ] Seed ditetapkan di semua level (Python, NumPy, framework)
-  [ ] Config di version control
-  [ ] README instruksi reproduksi lengkap
+  [x] Dependency terdokumentasi (requirements.txt / lock file) → dicatat versi PHP & ekstensi OpenSSL
+  [x] Seed ditetapkan di semua level (Python, NumPy, framework) → IV dan keypair RSA disimpan per-run
+  [x] Config di version control → config/encryption.php di-commit ke Git
+  [ ] README instruksi reproduksi lengkap → belum ditulis, lihat Latihan 3
 ```
 
 ---
 
 ## Latihan 1 — Environment Specification
 
-Dokumentasikan environment untuk eksperimen Anda (boleh environment saat ini atau yang direncanakan).
-
 | Komponen | Spesifikasi |
 |----------|------------|
-| CPU | *Contoh: Intel Core i7-12700H, 14 Core* |
-| RAM | *Contoh: 32 GB DDR5* |
-| GPU | *Contoh: NVIDIA RTX 3060 6GB / CPU-only jika tidak ada GPU* |
-| OS | *Contoh: Ubuntu 22.04 LTS / Windows 11* |
-| Runtime | |
-| Framework | |
-| Random Seed | |
+| CPU | *(isi sesuai laptop Anda)* |
+| RAM | *(isi sesuai laptop Anda)* |
+| GPU | Tidak digunakan — proses enkripsi/dekripsi murni CPU-bound |
+| OS | Windows 10/11 |
+| Runtime | PHP 8.x (via XAMPP) |
+| Framework | CodeIgniter + ekstensi OpenSSL bawaan PHP |
+| Random Seed | IV (Initialization Vector) 16-byte dari `openssl_random_pseudo_bytes()`, dicatat per-run |
 
 **Dependencies (minimal 5):**
 
 | Library | Version | Alasan Dibutuhkan |
 |---------|---------|-------------------|
-| *Contoh: scikit-learn* | *1.3.2* | *Klasifikasi + evaluasi metrik* |
-| | | |
-| | | |
-| | | |
-| | | |
+| PHP openssl extension | bundled PHP 8.x | Fungsi inti enkripsi AES & RSA (`openssl_encrypt`, `openssl_public_encrypt`) |
+| CodeIgniter | 3.x/4.x | Kerangka kerja aplikasi tempat modul E2EE diintegrasikan |
+| PHP hash extension | bundled PHP 8.x | Verifikasi integritas pesan (HMAC-SHA256) |
+| XAMPP (Apache + MySQL) | versi terpasang | Lingkungan server lokal untuk menjalankan eksperimen |
+| Composer (opsional) | 2.x | Manajemen dependency tambahan jika memakai library kripto pihak ketiga |
 
 ---
 
 ## Latihan 2 — Repeatability Test Plan
 
-Rancang tes repeatability sederhana: jalankan kode yang sama 3× di environment yang sama.
+Rancangan: jalankan fungsi enkripsi-dekripsi pesan yang sama (misal pesan 1 KB) sebanyak 3× pada environment yang sama, dengan IV yang **sama** (bukan random) agar hasil ciphertext dapat dibandingkan secara identik.
 
-| Run | Seed | Metrik Utama | Hasil Sama? |
+| Run | Seed (IV) | Metrik Utama | Hasil Sama? |
 |-----|------|-------------|-------------|
-| 1 | *Contoh: 42* | *Contoh: Accuracy* | — |
-| 2 | | | [ ] Ya / [ ] Tidak |
-| 3 | | | [ ] Ya / [ ] Tidak |
+| 1 | IV tetap: `a1b2c3...` (16 byte fixed) | Waktu enkripsi (ms) + waktu dekripsi (ms) + kecocokan plaintext hasil dekripsi | — |
+| 2 | IV tetap sama dengan Run 1 | Waktu enkripsi (ms) + waktu dekripsi (ms) + kecocokan plaintext hasil dekripsi | [ ] Ya / [ ] Tidak |
+| 3 | IV tetap sama dengan Run 1 | Waktu enkripsi (ms) + waktu dekripsi (ms) + kecocokan plaintext hasil dekripsi | [ ] Ya / [ ] Tidak |
 
-**Jika hasil berbeda, kemungkinan penyebab:**
+**Jika hasil berbeda, kemungkinan penyebab (khusus konteks E2EE):**
 
-> Penyebab umum non-repeatability:
-> - **Thermal throttling** — CPU/GPU overheating pada run berturut-turut → clock speed turun → waktu eksekusi berubah
-> - **Background process** — antivirus scan, update OS, atau cloud sync aktif saat run berlangsung
-> - **Cache dari run sebelumnya** — hasil tersimpan di memori/disk sehingga run berikutnya tidak menjalankan komputasi penuh
-> - **Random state tidak dikontrol di semua level** — Python seed di-set, tapi NumPy/PyTorch/TensorFlow punya seed independen
-
-___________________________________________________
+> - **Thermal throttling** — enkripsi RSA berulang pada laptop tanpa pendingin memadai bisa memperlambat run berikutnya
+> - **Background process** — Apache/MySQL XAMPP, antivirus, atau browser lain yang aktif bersamaan memengaruhi waktu eksekusi
+> - **IV/random tidak dikunci** — jika IV dibiarkan `openssl_random_pseudo_bytes()` tanpa dicatat, ciphertext akan selalu berbeda meski plaintext & key sama → bukan berarti tidak repeatable, tapi harus didokumentasikan sebagai *by design*
+> - **Cache OPcache PHP** — request pertama ke script lebih lambat karena kompilasi, request berikutnya lebih cepat karena OPcache
 
 **Checklist kontrol yang sudah diterapkan:**
-- [ ] Random seed di-set di semua level
-- [ ] Tidak ada background process yang mengganggu
-- [ ] Cache dibersihkan antar-run
-- [ ] Config file yang sama untuk semua run
+- [x] Random seed (IV) di-set tetap untuk keperluan pengujian repeatability
+- [ ] Tidak ada background process yang mengganggu → perlu tutup aplikasi lain saat pengujian
+- [ ] Cache dibersihkan antar-run → restart Apache/OPcache sebelum tiap run
+- [x] Config file yang sama (`config/encryption.php`) untuk semua run
 
 ---
 
 ## Latihan 3 — README Eksperimen
 
-Tulis README minimum untuk eksperimen Anda (6 komponen wajib).
-
 ```
-# Judul Eksperimen: ____________________
+# Judul Eksperimen: Pengujian Konsistensi Performa End-to-End Encryption (E2EE) Hybrid RSA+AES pada Aplikasi PHP
 
 ## 1. Environment
-> (Salin spesifikasi dari Latihan 1)
+> Windows 10/11, PHP 8.x (XAMPP), CodeIgniter, ekstensi OpenSSL aktif.
+> (Salin detail lengkap dari Latihan 1)
 
 ## 2. Installation
-> (Langkah instalasi, misal: "pip install -r requirements.txt")
+> 1. Install XAMPP, aktifkan Apache & ekstensi openssl di php.ini
+> 2. Clone/copy project ke folder htdocs
+> 3. Jalankan `composer install` jika ada dependency tambahan
 
 ## 3. Data
-> (Deskripsi data: sumber, format, ukuran)
+> Pesan uji berupa teks dengan variasi ukuran: 100 byte, 1 KB, 10 KB, 100 KB.
+> Disimpan sebagai file .txt di folder /test-data agar identik untuk setiap run.
 
 ## 4. Execution
-> (Command untuk menjalankan eksperimen)
+> Jalankan script `test_encryption.php` melalui browser (localhost/project/test_encryption.php)
+> atau via CLI: `php test_encryption.php`
 
 ## 5. Configuration
-> (File config yang digunakan + parameter kunci)
+> File: config/encryption.php
+> Parameter kunci: RSA key size = 2048 bit, algoritma AES = AES-256-CBC, IV = fixed untuk uji repeatability
 
 ## 6. Expected Output
-> (Contoh output yang diharapkan + format)
+> Output berupa tabel: ukuran pesan | waktu enkripsi (ms) | waktu dekripsi (ms) | ciphertext (base64) | status kecocokan plaintext (match/mismatch)
 ```
 
 ---
@@ -189,6 +133,13 @@ Tulis README minimum untuk eksperimen Anda (6 komponen wajib).
 
 > Apakah eksperimen Anda saat ini bisa direproduksi oleh orang lain tanpa bantuan Anda? Komponen apa yang masih hilang?
 
-**Level saat ini:** [ ] Repeatability / [ ] Reproducibility / [ ] Belum keduanya
+**Contoh jawaban:**
+Eksperimen E2EE ini sudah mencapai tahap **repeatability** karena dijalankan pada environment, kode, dan IV yang sama menghasilkan ciphertext identik. Namun belum sepenuhnya **reproducible** oleh orang lain karena beberapa komponen masih perlu dilengkapi.
+
+**Level saat ini:** [x] Repeatability / [ ] Reproducibility / [ ] Belum keduanya
+
 **Komponen yang belum terdokumentasi:**
-> ___________________________________________________
+> - Versi PHP dan ekstensi openssl yang persis digunakan belum dicatat dengan nomor versi eksplisit
+> - Belum ada `composer.lock` atau daftar versi library pihak ketiga jika digunakan
+> - Prosedur pembersihan cache (OPcache) antar-run belum distandarkan dalam script otomatis
+> - README belum menyertakan contoh output nyata (angka waktu enkripsi/dekripsi aktual) sebagai pembanding
